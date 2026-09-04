@@ -1,0 +1,12 @@
+{
+  "dataset_version": "1.1-storage-optimized",
+  "retention": {
+    "decisions.jsonl": "7 days by default; sampled every 10s plus all trade signals",
+    "orderbooks.jsonl": "2 days by default; sampled every 15s",
+    "trades.csv": "retain",
+    "markets.csv": "retain",
+    "resolutions.csv": "retain",
+    "pnl_1min.csv": "retain",
+    "paper_state.json": "replaced by paper.db"
+  }
+}

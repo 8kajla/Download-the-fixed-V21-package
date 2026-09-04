@@ -1,0 +1,85 @@
+{
+  "version": "V21_CLEAN_EMPIRICAL_ACCUMULATION_REALISTIC_CLOB",
+  "source": "supplied trader history analysis",
+  "source_trades": 778116,
+  "side_model": "BUY_ONLY",
+  "notional_scale": 0.4,
+  "asset_regime_trade_share": {
+    "BTC": {
+      "CHEAP": 0.3339,
+      "MID": 0.3993,
+      "CORE": 0.1645,
+      "HIGH": 0.1023
+    },
+    "SOL": {
+      "CHEAP": 0.5816,
+      "MID": 0.2457,
+      "CORE": 0.0917,
+      "HIGH": 0.081
+    },
+    "DOGE": {
+      "CHEAP": 0.8592,
+      "MID": 0.0856,
+      "CORE": 0.0181,
+      "HIGH": 0.0372
+    },
+    "HYPE": {
+      "CHEAP": 0.7563,
+      "MID": 0.1464,
+      "CORE": 0.0555,
+      "HIGH": 0.0419
+    },
+    "ETH": {
+      "CHEAP": 0.5986,
+      "MID": 0.2165,
+      "CORE": 0.0887,
+      "HIGH": 0.0962
+    },
+    "BNB": {
+      "CHEAP": 0.4472,
+      "MID": 0.3555,
+      "CORE": 0.136,
+      "HIGH": 0.0613
+    }
+  },
+  "trajectory_share_by_regime": {
+    "CHEAP": {
+      "rising": 0.137582,
+      "falling": 0.539948,
+      "flat": 0.32247
+    },
+    "MID": {
+      "rising": 0.341446,
+      "falling": 0.422447,
+      "flat": 0.236107
+    },
+    "CORE": {
+      "rising": 0.499717,
+      "falling": 0.280757,
+      "flat": 0.219526
+    },
+    "HIGH": {
+      "rising": 0.586489,
+      "falling": 0.133042,
+      "flat": 0.280469
+    }
+  },
+  "trajectory_threshold": 0.005,
+  "burst_gap_seconds": 18,
+  "hard_cutoff_seconds": 60,
+  "notes": [
+    "Asset x regime shares are trade-count shares, not capital shares.",
+    "Fine-band shares and entry sizing remain sourced from trader_behavior.json.",
+    "The source trade rows are BUY-only; no BUY/SELL persistence model is inferred.",
+    "The exact hidden trigger is unknown and is not invented by V21.",
+    "Asset trade-count priors are normalized from the supplied 778,116-row analysis; asset x regime is modeled as P(asset) * P(regime|asset), with fine-band conditional P(band|regime)."
+  ],
+  "asset_trade_share": {
+    "BTC": 0.21084516961481323,
+    "SOL": 0.17611898483002533,
+    "DOGE": 0.17264520971166253,
+    "HYPE": 0.16389844187756067,
+    "ETH": 0.1611649162849755,
+    "BNB": 0.11532727768096274
+  }
+}
