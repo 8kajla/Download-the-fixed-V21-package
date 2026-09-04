@@ -115,20 +115,30 @@ class MarketFeed:
         try:data=json.loads(raw)
         except Exception:return
         msgs=data if isinstance(data,list) else [data]
-        for m in msgs:
-            if not isinstance(m,dict):continue
+        for raw_msg in msgs:
+            if not isinstance(raw_msg,dict):continue
+            # Polymarket has emitted both flat market events and envelopes with
+            # the actual event under `payload`. Accept both so a protocol-shape
+            # change cannot leave the websocket connected while silently
+            # starving the strategy of books/trades.
+            payload=raw_msg.get('payload')
+            if isinstance(payload,dict):
+                m=dict(raw_msg)
+                m.update(payload)
+            else:
+                m=raw_msg
             with self._lock:self.message_count+=1; self.last_message_at=time.time()
-            aid=str(m.get('asset_id') or '')
+            aid=str(m.get('asset_id') or m.get('assetId') or m.get('token_id') or m.get('tokenId') or '')
             if aid:
                 with self._lock:self.last_message_by_token[aid]=time.time()
-            typ=str(m.get('event_type') or m.get('type') or '').lower()
+            typ=str(m.get('event_type') or m.get('eventType') or m.get('type') or '').lower()
             if typ=='book':self._book(m)
             elif typ=='price_change':self._price_change(m)
             elif typ=='best_bid_ask':self._bbo(m)
             elif typ=='last_trade_price':self._trade(m)
             elif typ=='tick_size_change':pass
     def _book(self,m):
-        token=str(m.get('asset_id') or '');
+        token=str(m.get('asset_id') or m.get('assetId') or m.get('token_id') or m.get('tokenId') or '');
         if not token:return
         bids={}; asks={}
         for x in m.get('bids') or []:
@@ -147,7 +157,7 @@ class MarketFeed:
         ts=event_ts(m.get('timestamp'))
         with self._lock:self.price_change_count+=1
         for x in m.get('price_changes') or []:
-            token=str(x.get('asset_id') or ''); side=str(x.get('side','')).upper(); p=num(x.get('price')); s=num(x.get('size'))
+            token=str(x.get('asset_id') or x.get('assetId') or x.get('token_id') or x.get('tokenId') or ''); side=str(x.get('side','')).upper(); p=num(x.get('price')); s=num(x.get('size'))
             if not token or p<=0 or side not in ('BUY','SELL'):continue
             with self._lock:
                 prev=self._last_event_ts_by_token.get(token,0.0)
@@ -161,19 +171,19 @@ class MarketFeed:
                 else:levels[p]=s
                 b['ts']=ts; self.last_book_by_token[token]=time.time()
     def _bbo(self,m):
-        token=str(m.get('asset_id') or '');
+        token=str(m.get('asset_id') or m.get('assetId') or m.get('token_id') or m.get('tokenId') or '');
         if not token:return
         with self._lock:
             ts=event_ts(m.get('timestamp')); prev=self._last_event_ts_by_token.get(token,0.0)
             if ts + 1e-6 < prev:return
             self._last_event_ts_by_token[token]=max(prev,ts)
             if token not in self.books or not self.books[token].get('snapshot'): return
-            self.books[token]=dict(self.books[token],best_bid=num(m.get('best_bid'),0),best_ask=num(m.get('best_ask'),0),ts=ts); self.last_book_by_token[token]=time.time()
+            self.books[token]=dict(self.books[token],best_bid=num(m.get('best_bid',m.get('bestBid')),0),best_ask=num(m.get('best_ask',m.get('bestAsk')),0),ts=ts); self.last_book_by_token[token]=time.time()
     def _trade(self,m):
-        token=str(m.get('asset_id') or ''); p=num(m.get('price')); s=num(m.get('size')); side=str(m.get('side','')).upper(); ts=event_ts(m.get('timestamp'),0.0)
+        token=str(m.get('asset_id') or m.get('assetId') or m.get('token_id') or m.get('tokenId') or ''); p=num(m.get('price')); s=num(m.get('size')); side=str(m.get('side','')).upper(); ts=event_ts(m.get('timestamp'),0.0)
         if not token or not (p>0 and s>0) or side not in ('BUY','SELL') or ts<=0:return
         if ts>1e12:ts/=1000
-        tr={'token_id':token,'price':p,'size':s,'side':side,'timestamp':ts,'transaction_hash':m.get('transaction_hash')}
+        tr={'token_id':token,'price':p,'size':s,'side':side,'timestamp':ts,'transaction_hash':m.get('transaction_hash') or m.get('transactionHash')}
         tr['trade_key']=event_key(tr)
         with self._lock:
             if self.store is not None:
