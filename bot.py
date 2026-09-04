@@ -146,13 +146,20 @@ def main():
                             token=cm['up'] if chosen['side']=='Up' else cm['down']
                             if execution.token_fresh(token,now,15.0):
                                 notion=min(float(chosen['target']),max(0.0,ledger.cash-reserved_exposure()),max(0.0,strategy.max_total_exposure-global_exposure()))
-                                if notion>=float(os.getenv('MIN_PAPER_FILL_USD','0.10')):
+                                if notion>=float(os.getenv('MIN_PAPER_FILL_USD','0.01')):
                                     shares=notion/chosen['bid']; rest_depth=book_cache[cm['condition']]['up'][2] if chosen['side']=='Up' else book_cache[cm['condition']]['down'][2]; depth=execution.feed.bid_depth(token,chosen['bid']); depth=rest_depth if depth is None else depth
                                     meta={'asset':cm['asset'],'market':cm,'entry_count_before':strategy.market_entry_count(cm['condition']),'burst_position':int(chosen.get('burst_position',0)),'trajectory_likelihood':chosen['trajectory_likelihood'],'reason':chosen['reason'],'strategy_band':chosen['band'],'strategy_notional':notion}
                                     o=execution.submit_buy(cm['condition'],token,cm,chosen['side'],chosen['bid'],shares,now,queue_hint=depth,meta=meta)
                                     strategy.observe_signal(cm['condition'],chosen['band'],notion,now,chosen['side']); next_trade_at=now+max(strategy.min_trade_gap_seconds,strategy.cadence.sample_gap()); log.info('ORDER RESTING | V21 REALISTIC CLOB | asset=%s | side=%s | notional=$%.4f | bid=$%.4f | shares=%.6f | queue_ahead=%.6f | ttl=%.1fs | latency=%.3fs',cm['asset'],chosen['side'],notion,chosen['bid'],shares,o['queue_ahead'],execution.ttl,execution.latency_ms/1000)
+                                else:
+                                    log.info('SIGNAL_REJECT | reason=NOTIONAL_BELOW_MIN | asset=%s | side=%s | target=$%.4f | available=$%.4f',cm['asset'],chosen['side'],float(chosen['target']),notion)
+                            else:
+                                log.info('SIGNAL_REJECT | reason=TOKEN_NOT_FRESH | asset=%s | side=%s | token=%s | ws_age=%.2f | book_age=%.2f',cm['asset'],chosen['side'],token,now-feed.last_message_by_token.get(token,0.0),now-feed.last_book_by_token.get(token,0.0))
             else:
-                if not feed.connected: log.warning('EXECUTION_GUARD | no fresh CLOB websocket; no new orders')
+                if not candidates:
+                    log.info('SIGNAL_REJECT | reason=NO_CANDIDATES | markets=%d',len(markets))
+                elif not feed.connected or (now-feed.last_message_at)>15:
+                    log.warning('EXECUTION_GUARD | no fresh CLOB websocket; no new orders')
             
             if now-last_resolve>=resolve_interval:resolve_finished(now); last_resolve=now
             if now-last_maintenance>=maintenance_interval:
